@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // Prefix API
-app.use("/api/v1", routes);
+app.use("/api", routes);
 
 // Endpoint default
 app.get("/", (req, res) => {
