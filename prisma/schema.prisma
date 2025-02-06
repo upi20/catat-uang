@@ -1,0 +1,167 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id       String @id @default(uuid()) @map("id")
+    username String @map("username")
+    email    String @unique @map("email")
+    password String @map("password")
+    role     String @map("role") // 'admin' atau 'user'
+    saldo    Int    @map("saldo")
+    ccy      String @map("ccy")
+    pin      String @map("pin")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    kategoriTransaksi KategoriTransaksi[]
+    rekening          Rekening[]
+    transaksi         Transaksi[]
+    utang             Utang[]
+
+    @@map("user")
+}
+
+model MasterIconRekening {
+    id   String @id @default(uuid()) @map("id")
+    nama String @map("nama")
+    icon String @map("icon")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    rekening Rekening[]
+
+    @@map("master_icon_rekening")
+}
+
+model MasterIconTransaction {
+    id   String @id @default(uuid()) @map("id")
+    nama String @map("nama")
+    icon String @map("icon")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    masterDefaultKategoriTransaksi MasterDefaultKategoriTransaksi[]
+    kategoriTransaksi              KategoriTransaksi[]
+
+    @@map("master_icon_transaction")
+}
+
+model MasterRekeningKategori {
+    id   String @id @default(uuid()) @map("id")
+    nama String @map("nama")
+    icon String @map("icon")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    rekening Rekening[]
+
+    @@map("master_rekening_kategori")
+}
+
+model MasterDefaultKategoriTransaksi {
+    id     String @id @default(uuid()) @map("id")
+    idIcon String @map("id_icon")
+    tipe   String @map("tipe") // 'pengeluaran' atau 'pendapatan'
+    nama   String @map("nama")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    masterIconTransaction MasterIconTransaction @relation(fields: [idIcon], references: [id])
+
+    @@map("master_default_kategori_transaksi")
+}
+
+model KategoriTransaksi {
+    id     String @id @default(uuid()) @map("id")
+    idUser String @map("id_user")
+    idIcon String @map("id_icon")
+    tipe   String @map("tipe") // 'pengeluaran' atau 'pendapatan'
+    nama   String @map("nama")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    user                  User                  @relation(fields: [idUser], references: [id])
+    masterIconTransaction MasterIconTransaction @relation(fields: [idIcon], references: [id])
+    transaksi             Transaksi[]
+
+    @@map("kategori_transaksi")
+}
+
+model Rekening {
+    id         String @id @default(uuid()) @map("id")
+    idUser     String @map("id_user")
+    idKategori String @map("id_kategori")
+    idIcon     String @map("id_icon")
+    noRekening String @map("no_rekening")
+    nama       String @map("nama")
+    saldo      Int    @map("saldo")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    user                   User                   @relation(fields: [idUser], references: [id])
+    masterRekeningKategori MasterRekeningKategori @relation(fields: [idKategori], references: [id])
+    masterIconRekening     MasterIconRekening     @relation(fields: [idIcon], references: [id])
+    transaksi              Transaksi[]
+
+    @@map("rekening")
+}
+
+model Transaksi {
+    id         String   @id @default(uuid()) @map("id")
+    idUser     String   @map("id_user")
+    idRekening String   @map("id_rekening")
+    idKategori String   @map("id_kategori")
+    idUtang    String?  @map("id_utang") // Opsional
+    idParent   String?  @map("id_parent") // Untuk transfer saldo
+    tipe       String   @map("tipe") // Jenis transaksi
+    nominal    Int      @map("nominal")
+    nama       String   @map("nama")
+    catatan    String?  @map("catatan")
+    waktu      DateTime @map("waktu")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    user              User              @relation(fields: [idUser], references: [id])
+    rekening          Rekening          @relation(fields: [idRekening], references: [id])
+    kategoriTransaksi KategoriTransaksi @relation(fields: [idKategori], references: [id])
+    utang             Utang?            @relation(fields: [idUtang], references: [id])
+
+    // Self-relation untuk transaksi transfer saldo:
+    parentTransaksi Transaksi?  @relation("Transfer", fields: [idParent], references: [id])
+    childTransaksi  Transaksi[] @relation("Transfer")
+
+    @@map("transaksi")
+}
+
+model Utang {
+    id           String   @id @default(uuid()) @map("id")
+    idUser       String   @map("id_user")
+    tipe         String   @map("tipe") // 'utang' atau 'piutang'
+    nama         String   @map("nama")
+    saldo        Int      @map("saldo")
+    saldoDibayar Int      @map("saldo_dibayar")
+    status       String   @map("status") // 'lunas' atau 'belum_lunas'
+    jatuhTempo   DateTime @map("jatuh_tempo")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    user      User        @relation(fields: [idUser], references: [id])
+    transaksi Transaksi[]
+
+    @@map("utang")
+}
